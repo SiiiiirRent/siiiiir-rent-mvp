@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [pays, setPays] = useState("Maroc");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [dateNaissance, setDateNaissance] = useState(""); // 🔥 NOUVEAU
 
   // État pour le rôle
   const [role, setRole] = useState<"loueur" | "locataire">("locataire");
@@ -61,6 +62,34 @@ export default function RegisterPage() {
     setPhotosPermis(photosPermis.filter((_, i) => i !== index));
   };
 
+  // 🔥 NOUVELLE FONCTION : Calculer l'âge
+  const calculateAge = (birthDate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  };
+
+  // 🔥 Calculer la date maximale (il y a 21 ans)
+  const getMaxBirthDate = () => {
+    const today = new Date();
+    const maxDate = new Date(
+      today.getFullYear() - 21,
+      today.getMonth(),
+      today.getDate()
+    );
+    return maxDate.toISOString().split("T")[0];
+  };
+
   const validateStep1 = () => {
     if (!nom.trim()) {
       setError("Le nom est requis");
@@ -78,6 +107,24 @@ export default function RegisterPage() {
       setError("Numéro de téléphone invalide");
       return false;
     }
+
+    // 🔥 VALIDATION DATE DE NAISSANCE (seulement pour locataires)
+    if (role === "locataire") {
+      if (!dateNaissance) {
+        setError("La date de naissance est requise pour les locataires");
+        return false;
+      }
+
+      const age = calculateAge(dateNaissance);
+
+      if (age < 21) {
+        setError(
+          "Vous devez avoir au moins 21 ans pour vous inscrire en tant que locataire"
+        );
+        return false;
+      }
+    }
+
     if (!password || password.length < 6) {
       setError("Le mot de passe doit contenir au moins 6 caractères");
       return false;
@@ -178,8 +225,8 @@ export default function RegisterPage() {
       console.log("📤 Upload photos permis...");
       const permisUrls = await uploadPhotos(user.uid, photosPermis, "permis");
 
-      // 3. ✅ Créer profil Firestore avec structure correcte
-      await setDoc(doc(db, "users", user.uid), {
+      // 3. ✅ Créer profil Firestore avec date de naissance
+      const userData: any = {
         uid: user.uid,
         email: user.email,
         displayName: `${prenom} ${nom}`,
@@ -219,7 +266,14 @@ export default function RegisterPage() {
         kycStatus: "pending", // 🔥 Statut KYC en attente
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
-      });
+      };
+
+      // 🔥 AJOUTER DATE DE NAISSANCE SEULEMENT POUR LOCATAIRES
+      if (role === "locataire" && dateNaissance) {
+        userData.dateNaissance = new Date(dateNaissance);
+      }
+
+      await setDoc(doc(db, "users", user.uid), userData);
 
       // 4. Mettre à jour displayName
       await updateProfile(user, {
@@ -455,6 +509,31 @@ export default function RegisterPage() {
                   placeholder="+212 6XX XXX XXX"
                 />
               </div>
+
+              {/* 🔥 NOUVEAU CHAMP : DATE DE NAISSANCE (seulement pour locataires) */}
+              {role === "locataire" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date de naissance *{" "}
+                    <span className="text-xs text-gray-500">
+                      (Minimum 21 ans)
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={dateNaissance}
+                    onChange={(e) => setDateNaissance(e.target.value)}
+                    required
+                    max={getMaxBirthDate()}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  {dateNaissance && calculateAge(dateNaissance) < 21 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      ⚠️ Vous devez avoir au moins 21 ans
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

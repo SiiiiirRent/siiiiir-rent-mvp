@@ -284,11 +284,22 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Suivez-nous</h4>
               <div className="flex gap-4">
-                <a href="#" className="hover:text-white">
-                  Facebook
-                </a>
-                <a href="#" className="hover:text-white">
+                <a
+                  href="https://www.instagram.com/siiiiirrent"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white text-green-400"
+                >
                   Instagram
+                </a>
+
+                <a
+                  href="https://www.tiktok.com/@siiiiirrent"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white text-green-400"
+                >
+                  TikTok
                 </a>
               </div>
             </div>

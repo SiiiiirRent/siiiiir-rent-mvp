@@ -656,7 +656,7 @@ export async function generateCheckoutPDF(
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text(
-    "Document généré par SIIIIIR Rent - www.siiiirrent.ma",
+    "Document généré par SIIIIIR Rent - www.siiiirrent.com",
     105,
     yPosition,
     { align: "center" }

@@ -236,7 +236,7 @@ export default function CheckInPage() {
 
         {/* Bouton validation */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          {/* 🆕 Affichage de l'étape en cours */}
+          {/* Affichage de l'étape en cours */}
           {validationStep && (
             <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
               <div className="flex items-center gap-3">

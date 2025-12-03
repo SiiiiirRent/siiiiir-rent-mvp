@@ -17,6 +17,7 @@ export default function CheckOutPage() {
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [validationStep, setValidationStep] = useState<string>("");
 
   // Form state
   const [photos, setPhotos] = useState<CheckPhoto[]>([]);
@@ -47,10 +48,10 @@ export default function CheckOutPage() {
         return;
       }
 
-      // Vérifier que le check-in a été fait
-      if (!res.checkin) {
-        alert("❌ Le check-in n'a pas encore été fait");
-        router.push("/");
+      // Vérifier que le check-in a été validé
+      if (!res.checkin || !res.checkin.validatedAt) {
+        alert("❌ Le check-in n'a pas encore été validé par le loueur");
+        router.push("/espace-locataire");
         return;
       }
 
@@ -97,6 +98,12 @@ export default function CheckOutPage() {
     try {
       setSaving(true);
 
+      setValidationStep("📝 Préparation...");
+      await new Promise((r) => setTimeout(r, 500));
+
+      setValidationStep("☁️ Envoi au serveur...");
+      const startTime = Date.now();
+
       await saveCheckout(
         reservationId,
         {
@@ -109,6 +116,11 @@ export default function CheckOutPage() {
         user.uid
       );
 
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      setValidationStep(`✅ Terminé (${duration}s)`);
+
+      await new Promise((r) => setTimeout(r, 1000));
+
       alert(
         "✅ Check-out enregistré avec succès !\n\nLe loueur va le valider."
       );
@@ -118,6 +130,7 @@ export default function CheckOutPage() {
       alert(`❌ Erreur : ${error.message}`);
     } finally {
       setSaving(false);
+      setValidationStep("");
     }
   };
 
@@ -149,17 +162,13 @@ export default function CheckOutPage() {
             📋 Check-out - État des lieux de sortie
           </h1>
           <p className="text-gray-600">
-            Prenez des photos du véhicule au retour
+            Prenez des photos du véhicule avant de le rendre
           </p>
 
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>Véhicule :</strong> {reservation.vehicleMarque}{" "}
               {reservation.vehicleModele}
-            </p>
-            <p className="text-sm text-blue-800 mt-1">
-              <strong>Kilométrage check-in :</strong>{" "}
-              {reservation.checkin?.kilometrage} km
             </p>
           </div>
         </div>
@@ -192,9 +201,6 @@ export default function CheckOutPage() {
                 placeholder="Ex: 45200"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Check-in : {reservation.checkin?.kilometrage} km
-              </p>
             </div>
 
             <div>
@@ -212,9 +218,6 @@ export default function CheckOutPage() {
                 <option value="1/4">⛽ 1/4</option>
                 <option value="vide">⛽ Vide</option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Check-in : {reservation.checkin?.carburant}
-              </p>
             </div>
           </div>
 
@@ -226,7 +229,7 @@ export default function CheckOutPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Ex: Nouvelle rayure sur la portière..."
+              placeholder="Ex: Nouvelle rayure sur le côté droit..."
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
@@ -242,12 +245,24 @@ export default function CheckOutPage() {
 
         {/* Bouton validation */}
         <div className="bg-white rounded-xl shadow-sm p-6">
+          {/* Affichage de l'étape en cours */}
+          {validationStep && (
+            <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                <p className="text-sm font-medium text-purple-900">
+                  {validationStep}
+                </p>
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleSubmit}
             disabled={saving || photos.length < 7 || !signature}
             className="w-full bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "⏳ Enregistrement..." : "✅ Valider le check-out"}
+            {saving ? "⏳ Validation..." : "✅ Valider le check-out"}
           </button>
 
           <p className="text-xs text-gray-500 text-center mt-3">
