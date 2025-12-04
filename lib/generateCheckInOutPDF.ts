@@ -72,8 +72,20 @@ function addImageToPDF(
 ) {
   try {
     if (imgData && imgData.startsWith("data:image")) {
-      doc.addImage(imgData, "JPEG", x, y, width, height);
-      console.log(`✅ Image ajoutée au PDF à position (${x}, ${y})`);
+      // Détecter le format de l'image
+      let format: "JPEG" | "PNG" = "PNG"; // Par défaut PNG pour les signatures
+
+      if (imgData.includes("data:image/png")) {
+        format = "PNG";
+      } else if (
+        imgData.includes("data:image/jpeg") ||
+        imgData.includes("data:image/jpg")
+      ) {
+        format = "JPEG";
+      }
+
+      doc.addImage(imgData, format, x, y, width, height);
+      console.log(`✅ Image ${format} ajoutée au PDF à position (${x}, ${y})`);
     } else {
       console.warn(
         `⚠️ Image ignorée (format invalide): ${imgData.substring(0, 30)}...`
@@ -286,15 +298,19 @@ export async function generateCheckinPDF(
       reservation.checkin.signatureLocataire.substring(0, 50)
     );
     try {
-      addImageToPDF(
-        doc,
-        reservation.checkin.signatureLocataire,
-        20,
-        yPosition,
-        80,
-        30
-      );
-      console.log("✅ Signature locataire ajoutée au PDF");
+      // ✅ CORRECTION : Convertir URL en base64 si nécessaire
+      let signatureLocataireBase64 = reservation.checkin.signatureLocataire;
+
+      // Si c'est une URL Firebase Storage, la convertir en base64
+      if (signatureLocataireBase64.startsWith("https://")) {
+        console.log("🔄 Conversion signature locataire URL → base64...");
+        signatureLocataireBase64 = await urlToBase64(signatureLocataireBase64);
+      }
+
+      if (signatureLocataireBase64) {
+        addImageToPDF(doc, signatureLocataireBase64, 20, yPosition, 80, 30);
+        console.log("✅ Signature locataire ajoutée au PDF");
+      }
     } catch (error) {
       console.error("❌ Erreur signature locataire:", error);
     }
@@ -318,15 +334,19 @@ export async function generateCheckinPDF(
       reservation.checkin.signatureLoueur.substring(0, 50)
     );
     try {
-      addImageToPDF(
-        doc,
-        reservation.checkin.signatureLoueur,
-        110,
-        yPosition,
-        80,
-        30
-      );
-      console.log("✅ Signature loueur ajoutée au PDF");
+      // ✅ CORRECTION : Convertir URL en base64 si nécessaire
+      let signatureLoueurBase64 = reservation.checkin.signatureLoueur;
+
+      // Si c'est une URL Firebase Storage, la convertir en base64
+      if (signatureLoueurBase64.startsWith("https://")) {
+        console.log("🔄 Conversion signature loueur URL → base64...");
+        signatureLoueurBase64 = await urlToBase64(signatureLoueurBase64);
+      }
+
+      if (signatureLoueurBase64) {
+        addImageToPDF(doc, signatureLoueurBase64, 110, yPosition, 80, 30);
+        console.log("✅ Signature loueur ajoutée au PDF");
+      }
     } catch (error) {
       console.error("❌ Erreur signature loueur:", error);
     }
@@ -335,7 +355,6 @@ export async function generateCheckinPDF(
   }
 
   doc.text(loueurNom, 110, yPosition + 35);
-  // ✅ CORRECTION : Fallback sur new Date() si validatedAt est null
   doc.text(
     `Date : ${formatDate(reservation.checkin?.validatedAt || new Date())}`,
     110,
@@ -593,15 +612,19 @@ export async function generateCheckoutPDF(
       reservation.checkout.signatureLocataire.substring(0, 50)
     );
     try {
-      addImageToPDF(
-        doc,
-        reservation.checkout.signatureLocataire,
-        20,
-        yPosition,
-        80,
-        30
-      );
-      console.log("✅ Signature locataire ajoutée au PDF");
+      // ✅ CORRECTION : Convertir URL en base64 si nécessaire
+      let signatureLocataireBase64 = reservation.checkout.signatureLocataire;
+
+      // Si c'est une URL Firebase Storage, la convertir en base64
+      if (signatureLocataireBase64.startsWith("https://")) {
+        console.log("🔄 Conversion signature locataire URL → base64...");
+        signatureLocataireBase64 = await urlToBase64(signatureLocataireBase64);
+      }
+
+      if (signatureLocataireBase64) {
+        addImageToPDF(doc, signatureLocataireBase64, 20, yPosition, 80, 30);
+        console.log("✅ Signature locataire ajoutée au PDF");
+      }
     } catch (error) {
       console.error("❌ Erreur signature locataire:", error);
     }
@@ -625,15 +648,19 @@ export async function generateCheckoutPDF(
       reservation.checkout.signatureLoueur.substring(0, 50)
     );
     try {
-      addImageToPDF(
-        doc,
-        reservation.checkout.signatureLoueur,
-        110,
-        yPosition,
-        80,
-        30
-      );
-      console.log("✅ Signature loueur ajoutée au PDF");
+      // ✅ CORRECTION : Convertir URL en base64 si nécessaire
+      let signatureLoueurBase64 = reservation.checkout.signatureLoueur;
+
+      // Si c'est une URL Firebase Storage, la convertir en base64
+      if (signatureLoueurBase64.startsWith("https://")) {
+        console.log("🔄 Conversion signature loueur URL → base64...");
+        signatureLoueurBase64 = await urlToBase64(signatureLoueurBase64);
+      }
+
+      if (signatureLoueurBase64) {
+        addImageToPDF(doc, signatureLoueurBase64, 110, yPosition, 80, 30);
+        console.log("✅ Signature loueur ajoutée au PDF");
+      }
     } catch (error) {
       console.error("❌ Erreur signature loueur:", error);
     }
@@ -642,7 +669,6 @@ export async function generateCheckoutPDF(
   }
 
   doc.text(loueurNom, 110, yPosition + 35);
-  // ✅ CORRECTION : Fallback sur new Date() si validatedAt est null
   doc.text(
     `Date : ${formatDate(reservation.checkout?.validatedAt || new Date())}`,
     110,

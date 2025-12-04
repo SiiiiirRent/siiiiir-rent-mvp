@@ -112,7 +112,7 @@ export async function uploadCheckPhoto(
 }
 
 /* ============================================================
-    🟢 (4) SAVE CHECK-IN (Locataire)
+    🟢 (4) SAVE CHECK-IN (Locataire) - VERSION CORRIGÉE ✅
 =============================================================== */
 export async function saveCheckin(
   reservationId: string,
@@ -128,20 +128,14 @@ export async function saveCheckin(
   const refDoc = doc(db, "reservations", reservationId);
 
   try {
-    const signatureUrl = await uploadSignatureToStorage(
-      reservationId,
-      data.signatureLocataire,
-      "checkin",
-      "locataire"
-    );
-
+    // ✅ CORRECTION : Sauvegarder la signature en base64 directement
+    // (comme pour fastValidateCheckin)
     const checkinData: Partial<CheckInData> = {
       photos: data.photos,
       kilometrage: data.kilometrage,
       carburant: data.carburant as CheckInData["carburant"],
-
       notes: data.notes,
-      signatureLocataire: signatureUrl,
+      signatureLocataire: data.signatureLocataire, // ✅ Base64 direct (pas d'upload)
       createdAt: serverTimestamp(),
       createdBy: userId,
     };
@@ -151,6 +145,8 @@ export async function saveCheckin(
       checkStatus: "checkin_en_attente_validation",
       updatedAt: serverTimestamp(),
     });
+
+    console.log("✅ Check-in sauvegardé (signature en base64)");
   } catch (error) {
     console.error("❌ Erreur check-in:", error);
     throw error;
@@ -197,7 +193,7 @@ export async function fastValidateCheckin(
 ) {
   const refDoc = doc(db, "reservations", reservationId);
 
-  // pas d’upload PDF ici → léger
+  // pas d'upload PDF ici → léger
   // pas de génération PDF ici → léger
   // upload signature NON compressée ici volontairement → rapide
 
@@ -211,7 +207,7 @@ export async function fastValidateCheckin(
 }
 
 /* ============================================================
-    🟢 (7) SAVE CHECK-OUT
+    🟢 (7) SAVE CHECK-OUT - VERSION CORRIGÉE ✅
 =============================================================== */
 export async function saveCheckout(
   reservationId: string,
@@ -226,29 +222,30 @@ export async function saveCheckout(
 ): Promise<void> {
   const refDoc = doc(db, "reservations", reservationId);
 
-  const signatureUrl = await uploadSignatureToStorage(
-    reservationId,
-    data.signatureLocataire,
-    "checkout",
-    "locataire"
-  );
+  try {
+    // ✅ CORRECTION : Sauvegarder la signature en base64 directement
+    // (comme pour fastValidateCheckin)
+    const checkoutData: Partial<CheckOutData> = {
+      photos: data.photos,
+      kilometrage: data.kilometrage,
+      carburant: data.carburant as CheckOutData["carburant"],
+      notes: data.notes,
+      signatureLocataire: data.signatureLocataire, // ✅ Base64 direct (pas d'upload)
+      createdAt: serverTimestamp(),
+      createdBy: userId,
+    };
 
-  const checkoutData: Partial<CheckOutData> = {
-    photos: data.photos,
-    kilometrage: data.kilometrage,
-    carburant: data.carburant as CheckOutData["carburant"],
+    await updateDoc(refDoc, {
+      checkout: checkoutData,
+      checkStatus: "checkout_en_attente_validation",
+      updatedAt: serverTimestamp(),
+    });
 
-    notes: data.notes,
-    signatureLocataire: signatureUrl,
-    createdAt: serverTimestamp(),
-    createdBy: userId,
-  };
-
-  await updateDoc(refDoc, {
-    checkout: checkoutData,
-    checkStatus: "checkout_en_attente_validation",
-    updatedAt: serverTimestamp(),
-  });
+    console.log("✅ Check-out sauvegardé (signature en base64)");
+  } catch (error) {
+    console.error("❌ Erreur check-out:", error);
+    throw error;
+  }
 }
 
 /* ============================================================

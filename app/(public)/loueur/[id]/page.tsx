@@ -13,6 +13,9 @@ import {
 import { db } from "@/lib/firebase";
 import { Vehicle, UserProfile } from "@/lib/types";
 import { MapPin, Star, Phone, Search, Calendar } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { fr } from "date-fns/locale";
 
 export default function LoueurPublicPage() {
   const params = useParams();
@@ -23,20 +26,25 @@ export default function LoueurPublicPage() {
   const [loueur, setLoueur] = useState<UserProfile | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
-  const [unavailableVehicleIds, setUnavailableVehicleIds] = useState<
-    Set<string>
-  >(new Set());
+  const [unavailableVehicleIds, setUnavailableVehicleIds] = useState<Set<string>>(
+    new Set<string>()
+  );
+  const [blockedDates, setBlockedDates] = useState<Date[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
-  const [dateDebutFilter, setDateDebutFilter] = useState("");
-  const [dateFinFilter, setDateFinFilter] = useState("");
+  const [dateDebutFilter, setDateDebutFilter] = useState<Date | null>(null);
+  const [dateFinFilter, setDateFinFilter] = useState<Date | null>(null);
   const [dateError, setDateError] = useState("");
+
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   useEffect(() => {
     if (loueurId) {
       void loadLoueurData();
+      void loadBlockedDates();
     }
   }, [loueurId]);
 
@@ -44,14 +52,12 @@ export default function LoueurPublicPage() {
     if (dateDebutFilter && dateFinFilter) {
       void checkVehiclesAvailability();
     } else {
-      setUnavailableVehicleIds(new Set());
+      setUnavailableVehicleIds(new Set<string>());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateDebutFilter, dateFinFilter, vehicles]);
 
   useEffect(() => {
     applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     vehicles,
     searchTerm,
@@ -62,6 +68,35 @@ export default function LoueurPublicPage() {
     dateFinFilter,
     dateError,
   ]);
+
+  // ⛔️ Charger les dates bloquées (toutes réservations existantes)
+  const loadBlockedDates = async () => {
+    try {
+      const reservationsRef = collection(db, "reservations");
+      const q = query(reservationsRef, where("loueurId", "==", loueurId));
+
+      const snapshot = await getDocs(q);
+      const blocked: Date[] = [];
+
+      snapshot.forEach((docSnap) => {
+        const r = docSnap.data() as any;
+        if (!r.dateDebut || !r.dateFin) return;
+
+        const start = r.dateDebut.toDate();
+        const end = r.dateFin.toDate();
+
+        const current = new Date(start);
+        while (current <= end) {
+          blocked.push(new Date(current));
+          current.setDate(current.getDate() + 1);
+        }
+      });
+
+      setBlockedDates(blocked);
+    } catch (error) {
+      console.error("Erreur dates bloquées:", error);
+    }
+  };
 
   const loadLoueurData = async () => {
     try {
@@ -100,7 +135,7 @@ export default function LoueurPublicPage() {
 
     if (endDate < startDate) {
       setDateError("La date de fin doit être après la date de début");
-      setUnavailableVehicleIds(new Set());
+      setUnavailableVehicleIds(new Set<string>());
       return;
     }
 
@@ -118,17 +153,14 @@ export default function LoueurPublicPage() {
       const unavailableIds = new Set<string>();
 
       snapshot.forEach((docSnap) => {
-        const reservation = docSnap.data() as any;
-        if (!reservation.dateDebut || !reservation.dateFin) return;
+        const r = docSnap.data() as any;
+        if (!r.dateDebut || !r.dateFin) return;
 
-        const existingStart = reservation.dateDebut.toDate();
-        const existingEnd = reservation.dateFin.toDate();
+        const existingStart = r.dateDebut.toDate();
+        const existingEnd = r.dateFin.toDate();
 
-        // chevauchement
         if (existingStart <= endDate && existingEnd >= startDate) {
-          if (reservation.vehicleId) {
-            unavailableIds.add(reservation.vehicleId as string);
-          }
+          if (r.vehicleId) unavailableIds.add(r.vehicleId as string);
         }
       });
 
@@ -155,12 +187,11 @@ export default function LoueurPublicPage() {
     }
 
     if (priceRange !== "all") {
-      const parts = priceRange.split("-");
-      const min = parseInt(parts[0] || "0", 10);
-      const max = parts[1] ? parseInt(parts[1], 10) : 999999;
+      const [min, maxStr] = priceRange.split("-");
+      const max = maxStr ? parseInt(maxStr, 10) : 999999;
       filtered = filtered.filter((v) => {
-        const prix = typeof v.prix === "number" ? v.prix : 0;
-        return prix >= min && prix <= max;
+        const prix = Number(v.prix) || 0;
+        return prix >= parseInt(min, 10) && prix <= max;
       });
     }
 
@@ -173,6 +204,14 @@ export default function LoueurPublicPage() {
 
   const handleVehicleClick = (vehicleId: string) => {
     router.push(`/loueur/${loueurId}/vehicule/${vehicleId}`);
+  };
+
+  // 🔥 Fonction pour vérifier si une date est bloquée
+  const isDateBlocked = (date: Date): boolean => {
+    return blockedDates.some(
+      (blockedDate) =>
+        blockedDate.toDateString() === date.toDateString()
+    );
   };
 
   if (loading) {
@@ -189,16 +228,14 @@ export default function LoueurPublicPage() {
   if (!loueur) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-xl text-gray-600">Loueur non trouvé</p>
-        </div>
+        <p className="text-xl text-gray-600">Loueur non trouvé</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Carte loueur */}
+      {/* CARTE LOUEUR */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
         <div className="flex flex-col md:flex-row items-start gap-6">
           <div className="flex-shrink-0">
@@ -233,6 +270,7 @@ export default function LoueurPublicPage() {
                 <span className="font-semibold">4.8</span>
                 <span className="text-sm text-gray-500">(125 avis)</span>
               </div>
+
               <div className="text-sm text-gray-600">
                 {vehicles.length} véhicule{vehicles.length > 1 ? "s" : ""}
               </div>
@@ -259,7 +297,7 @@ export default function LoueurPublicPage() {
         </div>
       </div>
 
-      {/* Filtres */}
+      {/* FILTRES */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Filtres</h2>
 
@@ -267,48 +305,102 @@ export default function LoueurPublicPage() {
           <p className="text-sm text-gray-600 mb-3">
             Choisissez vos dates pour voir les véhicules disponibles
           </p>
+
+          {/* 🔥 CALENDRIERS AVEC DATES BLOQUÉES */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* DATE DEBUT */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 Date de début
               </label>
-              <input
-                type="date"
-                value={dateDebutFilter}
-                onChange={(e) => setDateDebutFilter(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
+
+              <DatePicker
+                selected={dateDebutFilter}
+                onChange={(date) => setDateDebutFilter(date)}
+                minDate={new Date()}
+                excludeDates={blockedDates}
+                locale={fr}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="Sélectionnez une date"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                dayClassName={(date: Date) => {
+                  if (isDateBlocked(date)) {
+                    return "react-datepicker__day--disabled";
+                  }
+                  return "";
+                }}
               />
             </div>
+
+            {/* DATE FIN */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 Date de fin
               </label>
-              <input
-                type="date"
-                value={dateFinFilter}
-                onChange={(e) => setDateFinFilter(e.target.value)}
-                min={dateDebutFilter || new Date().toISOString().split("T")[0]}
+
+              <DatePicker
+                selected={dateFinFilter}
+                onChange={(date) => setDateFinFilter(date)}
+                minDate={dateDebutFilter || new Date()}
+                excludeDates={blockedDates}
+                locale={fr}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="Sélectionnez une date"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                dayClassName={(date: Date) => {
+                  if (isDateBlocked(date)) {
+                    return "react-datepicker__day--disabled";
+                  }
+                  return "";
+                }}
               />
             </div>
           </div>
+
           {dateError && (
             <p className="text-sm text-red-600 mt-2">{dateError}</p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* HEURES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Heure de début
+            </label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Heure de fin
+            </label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        {/* TYPE + PRIX */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -339,7 +431,7 @@ export default function LoueurPublicPage() {
         </div>
       </div>
 
-      {/* Liste véhicules */}
+      {/* LISTE DES VEHICULES */}
       {filteredVehicles.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
           <div className="text-6xl mb-4">🚗</div>
@@ -348,7 +440,7 @@ export default function LoueurPublicPage() {
           </h2>
           <p className="text-gray-600">
             {dateDebutFilter && dateFinFilter
-              ? "Aucun véhicule disponible pour ces dates. Essayez d'autres dates."
+              ? "Aucun véhicule disponible pour ces dates."
               : "Modifiez vos filtres pour voir les véhicules."}
           </p>
         </div>
@@ -361,7 +453,7 @@ export default function LoueurPublicPage() {
               className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
             >
               <div className="relative h-48 bg-gray-200">
-                {vehicle.photos && vehicle.photos.length > 0 ? (
+                {vehicle.photos?.length ? (
                   <img
                     src={vehicle.photos[0]}
                     alt="Photo du véhicule"
@@ -372,6 +464,7 @@ export default function LoueurPublicPage() {
                     <span className="text-4xl">🚗</span>
                   </div>
                 )}
+
                 <div className="absolute top-3 right-3 px-3 py-1 bg-white rounded-full text-sm font-medium">
                   {vehicle.type}
                 </div>
@@ -395,6 +488,7 @@ export default function LoueurPublicPage() {
                     </span>
                     <span className="text-gray-600 ml-1">MAD/j</span>
                   </div>
+
                   <div className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium">
                     Réserver
                   </div>

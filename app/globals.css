@@ -1,6 +1,7 @@
 /**
  * Styles globaux + Tailwind CSS
  */
+@import "react-datepicker/dist/react-datepicker.css";
 
 @tailwind base;
 @tailwind components;
@@ -20,8 +21,15 @@
 }
 
 body {
-  font-family: var(--font-montserrat), -apple-system, BlinkMacSystemFont,
-    "Segoe UI", "Roboto", "Oxygen", "Ubuntu", sans-serif;
+  font-family:
+    var(--font-montserrat),
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    sans-serif;
   font-size: 16px;
   line-height: 1.6;
   color: #475569; /* text-body */
@@ -336,4 +344,26 @@ select:focus {
     width: 2rem !important;
     line-height: 2rem !important;
   }
+}
+/* Styles pour les dates bloquées dans le calendrier */
+.react-datepicker__day--disabled {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  cursor: not-allowed !important;
+  text-decoration: line-through !important;
+}
+
+.react-datepicker__day--disabled:hover {
+  background-color: #fecaca !important;
+}
+
+.react-datepicker__day--excluded {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  cursor: not-allowed !important;
+  text-decoration: line-through !important;
+}
+
+.react-datepicker__day--excluded:hover {
+  background-color: #fecaca !important;
 }
