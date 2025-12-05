@@ -32,7 +32,8 @@ export async function POST(req: Request) {
     const {
       loueurId,
       vehicleId,
-      renterTmpId,
+      locataireId, // ✅ UID Firebase user connecté
+      renterTmpId, // ✅ GARDE pour rétro-compatibilité
       renterName,
       renterEmail,
       renterPhone,
@@ -43,6 +44,9 @@ export async function POST(req: Request) {
       vehicleName,
       vehiclePhoto,
     } = body;
+
+    // ✅ Prioriser locataireId si présent, sinon renterTmpId
+    const finalLocataireId = locataireId || renterTmpId;
 
     // ============================
     // 1) VALIDATION DE BASE
@@ -107,13 +111,50 @@ export async function POST(req: Request) {
       loueur.displayName || loueur.fullName || "Propriétaire";
 
     // ============================
+    // 2.5) CHARGER LE LOCATAIRE (Documents KYC)
+    // ============================
+    let locataireData: any = null;
+    let locataireDocuments: any = null;
+
+    if (finalLocataireId) {
+      try {
+        console.log("📄 Chargement locataire:", finalLocataireId);
+        const locataireRef = doc(db, "users", finalLocataireId);
+        const locataireSnap = await getDoc(locataireRef);
+
+        if (locataireSnap.exists()) {
+          locataireData = locataireSnap.data();
+          console.log("📄 Data locataire:", locataireData);
+
+          // Récupérer les documents KYC
+          locataireDocuments = {
+            cin: locataireData.cin || null,
+            cinRecto: locataireData.cinRecto || null,
+            cinVerso: locataireData.cinVerso || null,
+            permis: locataireData.permis || null,
+            permisRecto: locataireData.permisRecto || null,
+            permisVerso: locataireData.permisVerso || null,
+            kycStatus: locataireData.kycStatus || "non_verifie",
+            kycVerifiedAt: locataireData.kycVerifiedAt || null,
+          };
+
+          console.log("✅ Documents KYC récupérés:", locataireDocuments);
+        } else {
+          console.warn("⚠️ Locataire introuvable dans Firestore");
+        }
+      } catch (error) {
+        console.error("⚠️ Erreur récupération locataire:", error);
+        // On continue même si erreur (non bloquant)
+      }
+    }
+
+    // ============================
     // 3) VÉRIFIER LE DOUBLE-BOOKING
     // ============================
     const reservationsRef = collection(db, "reservations");
     const q = query(
       reservationsRef,
       where("vehicleId", "==", vehicleId),
-      // on couvre les 2 conventions que tu utilises
       where("status", "in", ["en_attente", "confirmee"])
     );
 
@@ -157,19 +198,21 @@ export async function POST(req: Request) {
     const reservationData = {
       loueurId,
       vehicleId,
-      // locataire "temporaire" (pas encore de compte)
-      locataireId: renterTmpId,
-      renterTmpId,
+      // locataire (UID Firebase ou tmpId)
+      locataireId: finalLocataireId,
+      renterTmpId: renterTmpId || finalLocataireId,
       locataireNom: renterName,
       locataireEmail: renterEmail,
       locatairePhone: renterPhone,
       renterName,
       renterEmail,
       renterPhone,
+      // 🆕 DOCUMENTS KYC (si disponibles)
+      locataireDocuments: locataireDocuments || null,
       // Infos véhicule
       vehicleName: vehicleName || "Véhicule",
       vehiclePhoto: vehiclePhoto || null,
-      // Dates (double naming pour compatibilité avec ton ancien code)
+      // Dates (double naming pour compatibilité)
       startDate: startTs,
       endDate: endTs,
       dateDebut: startTs,
