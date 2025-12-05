@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-email/render": "^2.0.0",
+    "@tailwindcss/postcss": "^4.1.17",
     "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",
