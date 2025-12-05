@@ -81,11 +81,28 @@ export default function ReservationForm({
     const nbJours = calculateNbJours();
     const prixTotal = calculatePrixTotal();
 
+    // ✅ NOUVEAU : Séparer nom complet en prénom + nom de famille
+    const nomCompletTrimmed = nom.trim();
+    const nameParts = nomCompletTrimmed.split(" ");
+
+    // Premier mot = prénom
+    const prenom = nameParts[0] || "";
+
+    // Reste = nom de famille (ou prénom si un seul mot)
+    const nomFamille =
+      nameParts.length > 1 ? nameParts.slice(1).join(" ") : nameParts[0] || "";
+
+    console.log("📝 Nom complet:", nomCompletTrimmed);
+    console.log("📝 Prénom:", prenom);
+    console.log("📝 Nom famille:", nomFamille);
+
     const reservationData = {
       loueurId,
       vehicleId: vehicle.id,
       locataireId: currentUser.uid, // ✅ UID Firebase vérifié
-      renterName: nom,
+      renterName: nomCompletTrimmed,
+      nom: nomFamille, // ✅ NOUVEAU - Pour le PDF
+      prenom: prenom, // ✅ NOUVEAU - Pour le PDF
       renterEmail: email,
       renterPhone: telephone,
       startDate: startDate.toISOString(),
@@ -187,6 +204,7 @@ export default function ReservationForm({
             value={nom}
             onChange={(e) => setNom(e.target.value)}
             required
+            placeholder="Ex: Aimad Benhammi"
             className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500"
           />
         </div>

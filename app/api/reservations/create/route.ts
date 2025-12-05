@@ -35,6 +35,8 @@ export async function POST(req: Request) {
       locataireId, // ✅ UID Firebase user connecté
       renterTmpId, // ✅ GARDE pour rétro-compatibilité
       renterName,
+      nom, // ✅ NOUVEAU - Nom de famille
+      prenom, // ✅ NOUVEAU - Prénom
       renterEmail,
       renterPhone,
       startDate,
@@ -47,6 +49,23 @@ export async function POST(req: Request) {
 
     // ✅ Prioriser locataireId si présent, sinon renterTmpId
     const finalLocataireId = locataireId || renterTmpId;
+
+    // 🚨 SÉCURITÉ - Bloquer si pas de locataireId
+    if (!finalLocataireId) {
+      console.error(
+        "🚨 SÉCURITÉ : Tentative réservation sans locataireId - BLOQUÉ"
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Vous devez être connecté pour réserver. Veuillez vous connecter et réessayer.",
+        },
+        { status: 401 }
+      );
+    }
+
+    console.log("✅ locataireId vérifié:", finalLocataireId);
 
     // ============================
     // 1) VALIDATION DE BASE
@@ -198,10 +217,12 @@ export async function POST(req: Request) {
     const reservationData = {
       loueurId,
       vehicleId,
-      // locataire (UID Firebase ou tmpId)
+      // Locataire (UID Firebase ou tmpId)
       locataireId: finalLocataireId,
       renterTmpId: renterTmpId || finalLocataireId,
       locataireNom: renterName,
+      nom: nom || "", // ✅ NOUVEAU - Nom de famille pour PDF
+      prenom: prenom || "", // ✅ NOUVEAU - Prénom pour PDF
       locataireEmail: renterEmail,
       locatairePhone: renterPhone,
       renterName,
