@@ -1,12 +1,11 @@
-/**
- * Styles globaux + Tailwind CSS
- */
-@import "react-datepicker/dist/react-datepicker.css";
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Styles globaux + Tailwind CSS
+ */
+@import "react-datepicker/dist/react-datepicker.css";
 /* Variables CSS globales */
 :root {
   --color-primary: #16a34a; /* Vert SIIIIIR */
