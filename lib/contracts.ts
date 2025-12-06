@@ -208,3 +208,39 @@ export async function generateContractPDF({
 
   return doc.output("blob");
 }
+// ============================================
+// FONCTIONS TEMPORAIRES (STUBS POUR BUILD)
+// ============================================
+
+export async function generateAndUploadContract(
+  reservationId: string,
+  reservation: any,
+  ownerInfo: any,
+  vehicleInfo: any,
+  ownerSignature?: string,
+  renterSignature?: string
+): Promise<void> {
+  console.log("⚠️ generateAndUploadContract - TODO: À implémenter");
+  // TODO: Implémenter la génération et upload du contrat
+}
+
+export async function signContractAsOwner(
+  reservationId: string,
+  signatureDataURL: string
+): Promise<void> {
+  console.log("⚠️ signContractAsOwner - TODO: À implémenter");
+  // TODO: Implémenter la signature loueur
+}
+
+export async function signContractAsRenter(
+  reservationId: string,
+  signatureDataURL: string
+): Promise<void> {
+  console.log("⚠️ signContractAsRenter - TODO: À implémenter");
+  // TODO: Implémenter la signature locataire
+}
+
+export async function finalizeContract(reservationId: string): Promise<void> {
+  console.log("⚠️ finalizeContract - TODO: À implémenter");
+  // TODO: Implémenter la finalisation du contrat
+}
