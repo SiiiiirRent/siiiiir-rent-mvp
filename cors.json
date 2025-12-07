@@ -3,9 +3,13 @@
     "origin": [
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://*.vercel.app"
+      "https://*.vercel.app",
+      "https://siiiiir-rent-mvp-89097.vercel.app",
+      "https://siiiiirrent.com",
+      "https://www.siiiiirrent.com"
     ],
-    "method": ["GET", "HEAD"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "responseHeader": ["Content-Type", "Authorization"],
     "maxAgeSeconds": 3600
   }
 ]
